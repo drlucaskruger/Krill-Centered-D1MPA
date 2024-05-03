@@ -1,9 +1,15 @@
-
-
-
 rm(list=c())
-
 gc()
+
+library(raster)
+library(dplyr)
+library(ggplot2)
+library(patchwork)
+library(terra)
+library(reshape2)
+
+
+
 
 ###------------- rescale data to binary ----------------
 
@@ -63,7 +69,7 @@ plot(rsum)
 
 max(rsum)
 
-writeRaster(rsum,"C:/D1MPA trimestral/D1MPA Fishable Area/UpDated_Layers_Sum.tif",overwrite=T)
+#writeRaster(rsum,"C:/D1MPA trimestral/D1MPA Fishable Area/UpDated_Layers_Sum.tif",overwrite=T)
 
 
 ### -------2018 layers------------
@@ -92,7 +98,7 @@ plot(rsum)
 max(rsum)
 
 
-writeRaster(rsum,"C:/D1MPA trimestral/D1MPA Fishable Area/All_Layers_Sum.tif",overwrite=T)
+#writeRaster(rsum,"C:/D1MPA trimestral/D1MPA Fishable Area/All_Layers_Sum.tif",overwrite=T)
 
 
 
@@ -105,7 +111,7 @@ plot(strata)
 
 summary(as.factor(strata$SubArea))
 
-gpz<-shapefile("C:/D1MPA trimestral/D1MPA Fishable Area/Shapefiles/GPZ_Strata.shp")
+gpz<-shapefile("C:/D1MPA trimestral/D1MPA Fishable Area/Shapefiles/GPZ_2024.shp")
 head(gpz)
 plot(gpz)
 
@@ -230,10 +236,6 @@ safm<-melt(SAF,id.vars=c("FA","SA"))
 gpzm<-na.omit(melt(GPZ,id.vars=c("SA")))
 gpfm<-na.omit(melt(GPF,id.vars=c("FA","SA")))
 
-
-head(stm)
-head(gpzm)
-
 names(totm)[names(totm) == "value"] <- "range"
 names(saom)[names(saom) == "value"] <- "SA.cover"
 names(gpzm)[names(gpzm) == "value"] <- "GPZ.cover"
@@ -263,6 +265,7 @@ names(alldf)[names(alldf) == "variable"] <- "layers"
 
 alldf$sa.fa.prop<-alldf$SA.coverF/alldf$SA.cover
 
+alldf$sa.fa.prop[is.na(alldf$sa.fa.prop)]<-0
 
 ggplot(alldf,aes(layers,sa.fa.prop))+
   geom_segment( aes(x=layers, xend=layers, y=0.75, yend=sa.fa.prop),
@@ -273,7 +276,6 @@ ggplot(alldf,aes(layers,sa.fa.prop))+
 
 ### if a layer has more than 75% of its occurrence within fishable area, it is a priority
 
-alldf$sa.fa.prop[is.na(alldf$sa.fa.prop)]<-0
 
 alldf$priority<-ifelse(alldf$sa.fa.prop>0.75,"Priority","Non-priority")
 
@@ -290,7 +292,7 @@ head(alldf)
 
 
 # specify layers. If it starts with X they are krill for the updated layers
-# if g, they are layers from 2018
+# if O, they are layers from 2018
 # if other, they are updated predator layers
 
 alldf$type<-substring(alldf$layers,first=1,last=1)
@@ -298,7 +300,7 @@ alldf$type<-substring(alldf$layers,first=1,last=1)
 summary(as.factor(alldf$type))
 
 alldf$types[alldf$type=="X"]<-"Krill updated"
-alldf$types[alldf$type=="g"]<-"layers 2018"
+alldf$types[alldf$type=="O"]<-"layers 2018"
 alldf$types[is.na(alldf$types)]<-"predators updated"
 
 summary(as.factor(alldf$types))
@@ -337,7 +339,21 @@ gpzW<-subset(predators,layers=="Penguin_Gentoo_AMJ" | layers=="Penguin_Gentoo_JA
     facet_wrap(SA~.)+coord_flip()+
     scale_colour_manual(values=c("blue","red"))+
     ggtitle(label="")+theme_bw()+
-    xlab("Summer layers")+ylab("Proportion of GPZ coverage"))
+    xlab("layers")+ylab("Proportion of GPZ coverage")+
+    ggtitle(label="Layers 2019"))
+
+### layers 2024 
+
+(ggplot(krill,aes(layers,GPZ.prop,colour=priority))+
+    geom_segment( aes(x=layers, xend=layers, y=0.2, yend=GPZ.prop),
+                  linetype="dotted") +
+    geom_point(size=2)+
+    geom_hline(yintercept=c(0.2))+
+    facet_wrap(SA~.)+coord_flip()+
+    scale_colour_manual(values=c("blue","red"))+
+    ggtitle(label="")+theme_bw()+
+    xlab("Summer layers")+ylab("Proportion of GPZ coverage")+
+    ggtitle(label="a. Layers 2024 Krill"))/
 
 # summer layers
 
@@ -349,19 +365,12 @@ gpzW<-subset(predators,layers=="Penguin_Gentoo_AMJ" | layers=="Penguin_Gentoo_JA
     facet_wrap(SA~.)+coord_flip()+
     scale_colour_manual(values=c("blue","red"))+
     ggtitle(label="")+theme_bw()+
-    xlab("Summer layers")+ylab("Proportion of GPZ coverage"))
+    xlab("Summer layers")+ylab("Proportion of GPZ coverage")+
+   ggtitle(label="b. Layers 2024 Summer"))/
 
 # a part of fish habitat is inside SOISS MPA. That might increase coverage
 
-(ggplot(krill,aes(layers,GPZ.prop,colour=priority))+
-    geom_segment( aes(x=layers, xend=layers, y=0.2, yend=GPZ.prop),
-                  linetype="dotted") +
-    geom_point(size=2)+
-    geom_hline(yintercept=c(0.2))+
-    facet_wrap(SA~.)+coord_flip()+
-    scale_colour_manual(values=c("blue","red"))+
-    ggtitle(label="")+theme_bw()+
-    xlab("Summer layers")+ylab("Proportion of GPZ coverage"))
+
 
 #Winter layers
 
@@ -373,7 +382,8 @@ gpzW<-subset(predators,layers=="Penguin_Gentoo_AMJ" | layers=="Penguin_Gentoo_JA
     facet_wrap(SA~.)+coord_flip()+
     scale_colour_manual(values=c("blue","red"))+
     ggtitle(label="")+theme_bw()+
-    xlab("Winter layers")+ylab("Proportion of GPZ coverage"))
+    xlab("Winter layers")+ylab("Proportion of GPZ coverage")+
+    ggtitle(label="c. Layers 2024 Winter"))
 
 # given the dependency of Elephant Seals to Krill, we will not increase coverage in winter 
 # one small area in Bransfield (king george island, outside admiralty bay) is important for gentoos in breeding and in winter 
