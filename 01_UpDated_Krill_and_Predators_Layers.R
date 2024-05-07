@@ -10,7 +10,7 @@ library(ggplot2)
 library(patchwork)
 library(terra)
 library(reshape2)
-library(heatwaveR)
+
 
 ### Load raster mask and generate spatial coordinate system objects
 ### load raster mask and generate spatial coordinate system objects
