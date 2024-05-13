@@ -57,7 +57,7 @@ plot(raster_stack)
 # load additional binary files 
 
 # Set the directory where TIF files are located
-tif_directory2 <- "C:/D1MPA trimestral/Non-tracking_data"
+tif_directory2 <- "C:/D1MPA 2024 EMM/Layers2024/Non-tracking_data"
 
 # List all TIF files in the directory
 tif_files2 <- list.files(tif_directory2, pattern = ".tif$", full.names = T)
@@ -69,9 +69,9 @@ plot(raster_stack2)
 
 
 #stack both stacks together
-rasters<-c(raster_stack,raster_stack2)
+rasters0<-c(raster_stack,raster_stack2)
 
-rsum<-sum(rasters) # sum all stacks
+rsum<-sum(rasters0) # sum all stacks
 
 plot(rsum)
 
@@ -94,6 +94,13 @@ tif_files3
 # Load all TIF files into a raster stack
 raster_stack3 <- terra::rast(tif_files3)
 plot(raster_stack3)
+
+sum2018<-sum(raster_stack3)
+
+plot(sum2018)
+
+
+#writeRaster(sum2018,"C:/D1MPA trimestral/D1MPA Fishable Area/Layers_2018_Sum.tif",overwrite=T)
 
 
 #stack both stacks together
@@ -162,7 +169,7 @@ ext.st<-terra::extract(rasters, stvect)
 
 head(ext.st)
 
-st.df <- data.frame(FA=stvect$Fishable,SA=stvect$SubArea,ext.st[2:61])
+st.df <- data.frame(FA=stvect$Fishable,SA=stvect$SubArea,ext.st[2:55])
 
 head(st.df)
 
@@ -192,7 +199,7 @@ names(gpzvect)[names(gpzvect) == "SubAreas"] <- "SA"
 
 ext.gpz<-terra::extract(rasters, gpzvect)
 
-gpz.df <- data.frame(FA=sfdf$Fishable,SA=gpzvect$SA,ext.gpz[2:61])
+gpz.df <- data.frame(FA=sfdf$Fishable,SA=gpzvect$SA,ext.gpz[2:55])
 
 #gpz.df$SA[is.na(gpz.df$SA)]<-"Outside"
 
@@ -202,18 +209,18 @@ summary(as.factor(gpz.df$SA))
 
 ###-----coverage calcualtion ---------
 
-total<- data.frame(st.df[3:62]) %>%
+total<- data.frame(st.df[3:56]) %>%
   #group_by(FA) %>%
   summarise_all(sum, na.rm = TRUE)
 
-totalF<- data.frame(st.df[1],st.df[3:62]) %>%
+totalF<- data.frame(st.df[1],st.df[3:56]) %>%
   group_by(FA) %>%
   summarise_all(sum, na.rm = TRUE)
 
 totalF<-subset(totalF,FA=="Yes")
 
 
-SAO <- st.df[2:62] %>%
+SAO <- st.df[2:56] %>%
   group_by(SA) %>%
   summarise_all(sum, na.rm = TRUE)
 
@@ -225,7 +232,7 @@ SAF<-subset(SAF,FA=="Yes")
 SAO
 SAF
 
-GPZ <- gpz.df[2:62] %>%
+GPZ <- gpz.df[2:56] %>%
   group_by(SA) %>%
   summarise_all(sum, na.rm = TRUE)
 
@@ -301,7 +308,7 @@ alldf$type<-substring(alldf$layers,first=1,last=1)
 
 summary(as.factor(alldf$type))
 
-alldf$types[alldf$type=="X"]<-"Krill updated"
+alldf$types[alldf$type=="K"]<-"Krill updated"
 alldf$types[alldf$type=="O"]<-"layers 2018"
 alldf$types[is.na(alldf$types)]<-"predators updated"
 
@@ -334,6 +341,9 @@ gpzW<-subset(predators,layers=="Penguin_Gentoo_AMJ" | layers=="Penguin_Gentoo_JA
                layers=="Whale_Humpback_AMJ"|layers=="Whale_AntMinke_AMJ"|
                layers=="Penguin_Emperor_Cols")
 
+
+
+#winter layers
 
 # 2018 layers 
 
@@ -662,5 +672,192 @@ gpzspz2$layers<-factor(gpzspz2$layers,levels=c("bathy_150_500","bathy_0_150",
   
   
 
+### ------- GPZ units coverage----------
+
+
+
+###--- coverage --------
+
+### load subareas and strata files
+
+gpz<-shapefile("C:/D1MPA 2024 EMM/Vertices/D1MPA_Vertices_2024.shp")
+head(gpz)
+plot(gpz)
+
+# preferred fishable area
+
+fa<-shapefile("C:/D1MPA trimestral/D1MPA Fishable Area/Shapefiles/Fishable_Area.shp")
+plot(fa)
+
+### spatial points
+
+spt<-shapefile("C:/D1MPA trimestral/D1MPA Fishable Area/Shapefiles/Grid_Points_D1.shp")
+
+head(spt)
+
+stfa<- (over(x = spt, y = fa))
+
+summary(as.factor(stfa$Fishable))
+
+stfa<-SpatialPointsDataFrame(coordinates(spt),stfa[4],proj4string = crs(spt))
+
+#-----strata coverage -----------
+
+st.points<- (over(x = stfa, y = strata))
+
+summary(as.factor(st.points$SubArea))
+
+stratas<-data.frame(st.points[4],stfa[1], coordinates(spt))
+
+stgrid<-SpatialPointsDataFrame(coordinates(spt),stratas)
+
+#plot(stgrid)
+
+stvect<-vect(stgrid)
+
+head(stvect)
+
+summary(as.factor(stvect$SubArea))
+
+ext.st<-terra::extract(rasters0, stvect)
+
+head(ext.st)
+
+st.df <- data.frame(FA=stvect$Fishable,SA=stvect$SubArea,ext.st[2:32])
+
+head(st.df)
+
+summary(as.factor(st.df$SA))
+summary(as.factor(st.df$FA))
+
+
+###--------- gpz covergae-----
+
+head(gpz)
+
+
+
+gpz.points<- (over(x = stfa, y = gpz))
+
+gpzs<-data.frame(gpz.points)
+head(gpzs)
+
+summary(as.factor(gpzs$Name))
+
+#summary(as.factor(gpzs$Strata))
+
+sfdf<-data.frame(stfa,gpzs)
+
+head(sfdf)
+
+gpzgrid<-SpatialPointsDataFrame(coordinates(stfa),sfdf)
+
+gpzvect<-vect(gpzgrid)
+
+#names(gpzvect)[names(gpzvect) == "SubAreas"] <- "SA"
+
+ext.gpz<-terra::extract(rasters0, gpzvect)
+
+gpz.df <- data.frame(FA=sfdf$Fishable,SA=gpzvect$Name,Zone=gpzvect$Zone,ext.gpz[2:32])
+
+#gpz.df$SA[is.na(gpz.df$SA)]<-"Outside"
+
+summary(as.factor(gpz.df$FA))
+summary(as.factor(gpz.df$SA))
+
+
+
+###-----coverage calcualtion ---------
+
+total<- data.frame(st.df[3:56]) %>%
+  #group_by(FA) %>%
+  summarise_all(sum, na.rm = TRUE)
+
+totalF<- data.frame(st.df[1],st.df[3:56]) %>%
+  group_by(FA) %>%
+  summarise_all(sum, na.rm = TRUE)
+
+totalF<-subset(totalF,FA=="Yes")
+
+head(gpz.df)
+
+
+GPZ <- gpz.df[2:34] %>%
+  group_by(SA,Zone) %>%
+  summarise_all(sum, na.rm = TRUE)
+
+GPF <- gpz.df %>%
+  group_by(FA,SA,Zone) %>%
+  summarise_all(sum, na.rm = TRUE)
+
+GPF<-subset(GPF,FA=="Yes")
+
+
+
+totm<-melt(total)
+tofm<-melt(totalF)
+
+gpzm<-na.omit(melt(GPZ,id.vars=c("SA","Zone")))
+gpfm<-na.omit(melt(GPF,id.vars=c("FA","SA","Zone")))
+
+
+
+
+names(totm)[names(totm) == "value"] <- "range"
+names(gpzm)[names(gpzm) == "value"] <- "cover"
+
+names(tofm)[names(tofm) == "value"] <- "rangeF"
+names(gpfm)[names(gpfm) == "value"] <- "coverF"
+
+head(gpfm)
+
+head(tofm)
+
+
+df<-merge(gpzm,totm,all=T)
+head(df)
+dff<-merge(df,tofm)
+head(dff)
+
+alldf<-merge(dff,gpfm)
+
+
+head(alldf)
+
+names(alldf)[names(alldf) == "variable"] <- "layers"
+
+alldf$propcov<-alldf$cover/alldf$range
+alldf$propcovF<-alldf$coverF/alldf$rangeF
+alldf$pro.rangeF<-alldf$rangeF/alldf$range
+
+summary(as.factor(alldf$FA))
+
+gpz.cov<-subset(alldf,Zone=="GPZ")
+
+gpz.cov<-subset(gpz.cov,propcov>0)
+
+write.csv(gpz.cov,"C:/D1MPA 2024 EMM/gpz_coverage.csv")
+
+
+ggplot(subset(gpz.cov,SA=="SOI"),aes(reorder(layers,+propcovF), propcovF))+
+  geom_point(size=3)+coord_flip()+facet_wrap(SA~.)+theme_bw()+
+  xlab("Layers")+ylab("Proportion of coverage")+
+  
+  ggplot(subset(gpz.cov,SA=="EI"),aes(reorder(layers,+propcovF), propcovF))+
+  geom_point(size=3)+coord_flip()+facet_wrap(SA~.)+theme_bw()+
+  xlab("Layers")+ylab("Proportion of coverage")+
+  
+  ggplot(subset(gpz.cov,SA=="SSIW"),aes(reorder(layers,+propcovF), propcovF))+
+  geom_point(size=3)+coord_flip()+facet_wrap(SA~.)+theme_bw()+
+  xlab("Layers")+ylab("Proportion of coverage")+
+  
+  ggplot(subset(gpz.cov,SA=="NWAP"),aes(reorder(layers,+propcovF), propcovF))+
+  geom_point(size=3)+coord_flip()+facet_wrap(SA~.)+theme_bw()+
+  xlab("Layers")+ylab("Proportion of coverage")+
+  
+  
+  ggplot(subset(gpz.cov,SA=="SWAP"),aes(reorder(layers,+propcovF), propcovF))+
+  geom_point(size=3)+coord_flip()+facet_wrap(SA~.)+theme_bw()+
+  xlab("Layers")+ylab("Proportion of coverage")
 
   
